@@ -1,0 +1,12 @@
+[package]
+name = "later"
+version = "0.1.0"
+authors = ["Stanislav Panferov <fnight.m@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+chrono="^0.4"
+nom="^5"
+
+[dev-dependencies]
+insta = "0.10.1"
