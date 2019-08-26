@@ -9,17 +9,17 @@ pub struct Schedule {
 }
 
 impl Schedule {
-	fn from_parts(parts: Vec<SchedulePart>) -> Self {
+	pub fn from_parts(parts: Vec<SchedulePart>) -> Self {
 		Schedule { parts }
 	}
 
 	/// Get an interator to resolve intervals
-	fn iter_within(&self, interval: Interval) -> ScheduleIterator {
+	pub fn iter_within(&self, interval: Interval) -> ScheduleIterator {
 		ScheduleIterator::new(self, interval)
 	}
 }
 
-struct ScheduleIterator<'a> {
+pub struct ScheduleIterator<'a> {
 	interval: Interval,
 	schedule: &'a Schedule,
 	every: Vec<&'a Box<dyn AsIntervals>>,
@@ -36,7 +36,7 @@ impl<'a> ScheduleIterator<'a> {
 			}
 		}
 
-		every.sort_by(|a, b| b.duration().cmp(a.duration()));
+		every.sort_by(|a, b| b.duration().cmp(&a.duration()));
 
 		ScheduleIterator {
 			schedule,

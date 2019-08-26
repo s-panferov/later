@@ -12,8 +12,8 @@ impl EveryN {
 }
 
 impl AsIntervals for EveryN {
-	fn duration(&self) -> &Duration {
-		&self.0
+	fn duration(&self) -> Duration {
+		self.0.clone()
 	}
 
 	fn iter_within(

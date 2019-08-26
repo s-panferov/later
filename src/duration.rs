@@ -2,8 +2,8 @@ use crate::interval::{AsIntervals, Interval};
 use chrono::Duration;
 
 impl AsIntervals for Duration {
-	fn duration(&self) -> &Duration {
-		self
+	fn duration(&self) -> Duration {
+		self.clone()
 	}
 
 	fn iter_within(
