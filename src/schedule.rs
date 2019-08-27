@@ -130,7 +130,7 @@ mod tests {
 			.iter_within(Interval::from(
 				"2019-01-01T00:00:00Z".parse().unwrap(),
 			))
-			.take(1000)
+			.take(10)
 			.collect();
 
 		assert_debug_snapshot_matches!("every", what);

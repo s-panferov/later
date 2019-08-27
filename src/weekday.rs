@@ -41,10 +41,11 @@ impl Iterator for WeekdayIterator {
 			let target_num = self.weekday.num_days_from_monday();
 			let current_num = current_day.num_days_from_monday();
 			let diff = target_num as i32 - current_num as i32;
+			println!("{:?}", diff);
 			let days_to_add = if diff > 0 {
 				diff as i64
 			} else {
-				7 - diff as i64
+				7 + diff as i64
 			};
 			from = from + Duration::days(days_to_add)
 		}
