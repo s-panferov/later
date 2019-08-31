@@ -12,7 +12,7 @@ type Iterators = Vec<Box<dyn Iterator<Item = Interval>>>;
 
 /// An iterator that combines a set of other iterators
 /// and produces a consequest stream of Intervals without overlaps.
-struct Combine {
+pub struct Combine {
 	iterators: Iterators,
 	state: Vec<Variant>,
 	prev: Option<Interval>,
@@ -20,7 +20,7 @@ struct Combine {
 }
 
 impl Combine {
-	fn new(iterators: Iterators) -> Self {
+	pub fn new(iterators: Iterators) -> Self {
 		let state = iterators
 			.iter()
 			.enumerate()
@@ -84,8 +84,6 @@ impl Iterator for Combine {
 					}
 				},
 			});
-
-			println!("{:?}", self.state);
 
 			let mut result: Option<Interval> = None;
 			for v in &mut self.state {
