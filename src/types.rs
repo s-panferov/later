@@ -12,7 +12,7 @@ pub enum Dimension {
 	Year,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Period {
 	Fixed(Duration),
 	Month(i32),
@@ -20,7 +20,8 @@ pub enum Period {
 	Year(i32),
 }
 
-#[derive(Debug)]
-pub enum IntervalSpecifier {
+#[derive(Debug, PartialEq)]
+pub enum RecurringInterval {
 	Period(Period),
+	NthPeriod(u32, Period),
 }

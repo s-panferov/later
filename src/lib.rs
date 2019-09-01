@@ -1,6 +1,5 @@
 mod combine;
 mod duration;
-mod every_n;
 mod interval;
 mod merge;
 mod merge_n;

@@ -1,17 +1,24 @@
-use chrono::Duration;
+use chrono::{format::Parsed, Duration, NaiveTime};
 use nom::{
+	branch::alt,
 	bytes::complete::tag,
-	character::complete::{alpha1, digit1, space1},
+	character::complete::{alpha1, digit1, space0, space1},
+	combinator::opt,
 	error::ErrorKind,
+	sequence::tuple,
 	Err,
 };
 
-use crate::types::{Dimension, Period};
+use crate::types::{Dimension, Period, RecurringInterval};
 
+pub type NomErr<I> = Err<(I, ErrorKind)>;
+
+#[derive(Debug)]
 pub enum ParseError<'a, I> {
-	Layout(Err<(I, ErrorKind)>),
+	Layout(NomErr<I>),
 	UnknownDimension(I, &'a str),
-	InvalidDuration(I, std::num::ParseIntError),
+	InvalidNumericValue(I, std::num::ParseIntError),
+	InvalidTime(chrono::format::ParseError),
 }
 
 pub type ParseResult<'a, I, O> = Result<(I, O), ParseError<'a, I>>;
@@ -57,16 +64,34 @@ pub fn parse_dimension(input: &str) -> ParseResult<&str, Dimension> {
 	}
 }
 
-pub fn parse_period(input: &str) -> ParseResult<&str, Period> {
+pub fn parse_period(input: &str) -> ParseResult<&str, RecurringInterval> {
 	let (input, _) = tag("every")(input).map_err(ParseError::Layout)?;
 	let (input, _) = space1(input).map_err(ParseError::Layout)?;
+	let (input, nth): (&str, Option<(&str, &str, &str, &str)>) = opt(tuple((
+		digit1,
+		alt((space0, tag("-"))),
+		alt((tag("st"), tag("nd"), tag("rd"), tag("th"))),
+		space1,
+	)))(input)
+	.map_err(ParseError::Layout)?;
+
+	let nth: Option<u32> = match nth {
+		Some((digit, _, _, _)) => Some(
+			digit
+				.parse()
+				.map_err(|e| ParseError::InvalidNumericValue(digit, e))?,
+		),
+		None => None,
+	};
+
 	let (input, num) = digit1(input).map_err(ParseError::Layout)?;
+	let (input, _) = space0(input).map_err(ParseError::Layout)?;
 	let (input, dim) = parse_dimension(input)?;
 	let num: i64 = num
 		.parse()
-		.map_err(|e| ParseError::InvalidDuration(num, e))?;
+		.map_err(|e| ParseError::InvalidNumericValue(num, e))?;
 
-	let duration = match dim {
+	let period = match dim {
 		Dimension::Second => Period::Fixed(Duration::seconds(num)),
 		Dimension::Minute => Period::Fixed(Duration::minutes(num)),
 		Dimension::Hour => Period::Fixed(Duration::hours(num)),
@@ -77,7 +102,129 @@ pub fn parse_period(input: &str) -> ParseResult<&str, Period> {
 		Dimension::Year => Period::Year(num as i32),
 	};
 
-	Ok((input, duration))
+	let result = match nth {
+		Some(i) => RecurringInterval::NthPeriod(i, period),
+		None => RecurringInterval::Period(period),
+	};
+
+	Ok((input, result))
 }
 
-// pub fn parse(input: &str) -> IResult<&str, &str> {}
+#[derive(PartialEq, Debug)]
+enum Abbr {
+	AM,
+	PM,
+}
+
+fn parse_am(input: &str) -> Result<(&str, Abbr), NomErr<&str>> {
+	let (input, _) =
+		alt((tag("AM"), tag("am"), tag("A.M"), tag("a.m.")))(input)?;
+
+	Ok((input, Abbr::AM))
+}
+
+fn parse_pm(input: &str) -> Result<(&str, Abbr), NomErr<&str>> {
+	let (input, _) =
+		alt((tag("PM"), tag("pm"), tag("P.M"), tag("p.m.")))(input)?;
+
+	Ok((input, Abbr::PM))
+}
+
+fn parse_abbr(input: &str) -> Result<(&str, Abbr), NomErr<&str>> {
+	alt((parse_am, parse_pm))(input)
+}
+
+fn parse_time(input: &str) -> ParseResult<&str, NaiveTime> {
+	let (input, h) = digit1(input).map_err(ParseError::Layout)?;
+
+	let (input, m) =
+		opt(tuple((tag(":"), digit1)))(input).map_err(ParseError::Layout)?;
+
+	let (input, s) =
+		opt(tuple((tag(":"), digit1)))(input).map_err(ParseError::Layout)?;
+
+	let (input, ampm) =
+		opt(tuple((space0, parse_abbr)))(input).map_err(ParseError::Layout)?;
+
+	let h: i64 = h
+		.parse()
+		.map_err(|e| ParseError::InvalidNumericValue(h, e))?;
+
+	let m: i64 = match m {
+		Some((_, m)) => m
+			.parse()
+			.map_err(|e| ParseError::InvalidNumericValue(m, e))?,
+		None => 0,
+	};
+
+	let s: i64 = match s {
+		Some((_, s)) => s
+			.parse()
+			.map_err(|e| ParseError::InvalidNumericValue(s, e))?,
+		None => 0,
+	};
+
+	let mut parsed = Parsed::new();
+	parsed.set_minute(m);
+	parsed.set_second(s);
+
+	println!("{:?}", ampm);
+
+	match ampm {
+		Some((_, ampm)) => {
+			parsed.set_hour12(h);
+			parsed.set_ampm(if ampm == Abbr::AM { false } else { true });
+		}
+		None => {
+			parsed.set_hour(h);
+		}
+	}
+
+	let time = parsed.to_naive_time().map_err(ParseError::InvalidTime)?;
+
+	Ok((input, time))
+}
+
+fn parse_at(input: &str) -> ParseResult<&str, NaiveTime> {
+	let (input, _) = tag("at")(input).map_err(ParseError::Layout)?;
+	let (input, _) = space1(input).map_err(ParseError::Layout)?;
+
+	parse_time(input)
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn parse_every_10_days() {
+		assert_eq!(
+			parse_period("every 10 days").unwrap().1,
+			RecurringInterval::Period(Period::Fixed(Duration::days(10)))
+		)
+	}
+
+	#[test]
+	fn parse_every_2nd_2_years() {
+		assert_eq!(
+			parse_period("every 2nd 2 years").unwrap().1,
+			RecurringInterval::NthPeriod(2, Period::Year(2))
+		)
+	}
+
+	#[test]
+	fn parse_at_10_00() {
+		assert_eq!(
+			parse_at("at 10:00").unwrap().1,
+			NaiveTime::from_hms(10, 0, 0)
+		)
+	}
+
+	#[test]
+	fn parse_at_7_pm() {
+		assert_eq!(
+			parse_at("at 7 p.m.").unwrap().1,
+			NaiveTime::from_hms(19, 0, 0)
+		)
+	}
+}
