@@ -5,6 +5,7 @@ use nom::{
 	character::complete::{alpha1, digit1, space0, space1},
 	combinator::opt,
 	error::ErrorKind,
+	multi::many1,
 	sequence::tuple,
 	Err,
 };
@@ -185,11 +186,32 @@ fn parse_time(input: &str) -> ParseResult<&str, NaiveTime> {
 	Ok((input, time))
 }
 
-fn parse_at(input: &str) -> ParseResult<&str, NaiveTime> {
+fn parse_at(input: &str) -> ParseResult<&str, Vec<NaiveTime>> {
 	let (input, _) = tag("at")(input).map_err(ParseError::Layout)?;
 	let (input, _) = space1(input).map_err(ParseError::Layout)?;
 
-	parse_time(input)
+	let mut res = vec![];
+	let sep = opt(alt((
+		tuple((space0, tag(","), space0)),
+		tuple((space1, tag("and"), space1)),
+	)));
+
+	let (mut input, time) = parse_time(input)?;
+	res.push(time);
+
+	loop {
+		let (i, s) = sep(input).map_err(ParseError::Layout)?;
+		match s {
+			Some(_) => {
+				let (i, time) = parse_time(i)?;
+				res.push(time);
+				input = i
+			}
+			None => break,
+		}
+	}
+
+	Ok((input, res))
 }
 
 #[cfg(test)]
@@ -216,15 +238,27 @@ mod tests {
 	fn parse_at_10_00() {
 		assert_eq!(
 			parse_at("at 10:00").unwrap().1,
-			NaiveTime::from_hms(10, 0, 0)
+			vec![NaiveTime::from_hms(10, 0, 0)]
 		)
 	}
 
 	#[test]
 	fn parse_at_7_pm() {
 		assert_eq!(
-			parse_at("at 7 p.m.").unwrap().1,
-			NaiveTime::from_hms(19, 0, 0)
+			parse_at("at 7 pm").unwrap().1,
+			vec![NaiveTime::from_hms(19, 0, 0)]
+		)
+	}
+
+	#[test]
+	fn parse_at_7_830pm_2030() {
+		assert_eq!(
+			parse_at("at 7pm, 8:30pm and 20:30").unwrap().1,
+			vec![
+				NaiveTime::from_hms(19, 0, 0),
+				NaiveTime::from_hms(20, 30, 0),
+				NaiveTime::from_hms(20, 30, 0)
+			]
 		)
 	}
 }
