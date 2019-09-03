@@ -3,8 +3,8 @@ use nom::character::complete::alpha1;
 use super::error::{ParseError, ParseResult};
 use crate::types::Dimension;
 
-pub fn parse_dimension(input: &str) -> ParseResult<&str, Dimension> {
-	let (input, dim) = alpha1(input).map_err(ParseError::Layout)?;
+pub fn parse_dimension(input: &str) -> ParseResult<Dimension> {
+	let (input, dim) = alpha1(input)?;
 	match dim {
 		"s" => Ok((input, Dimension::Second)),
 		"sec" => Ok((input, Dimension::Second)),
@@ -40,6 +40,6 @@ pub fn parse_dimension(input: &str) -> ParseResult<&str, Dimension> {
 		"yr" => Ok((input, Dimension::Year)),
 		"yrs" => Ok((input, Dimension::Year)),
 		"years" => Ok((input, Dimension::Year)),
-		_ => Err(ParseError::UnknownDimension(input, dim)),
+		_ => Err(ParseError::UnknownDimension {}.into_err(input)),
 	}
 }

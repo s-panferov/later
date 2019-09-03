@@ -7,7 +7,7 @@ use nom::{
 	sequence::tuple,
 };
 
-use super::error::{NomErr, ParseError, ParseResult};
+use super::error::{ParseError, ParseResult};
 
 #[derive(PartialEq, Debug)]
 enum Abbr {
@@ -15,33 +15,27 @@ enum Abbr {
 	PM,
 }
 
-pub fn parse_time(input: &str) -> ParseResult<&str, NaiveTime> {
-	let (input, h) = digit1(input).map_err(ParseError::Layout)?;
-
-	let (input, m) =
-		opt(tuple((tag(":"), digit1)))(input).map_err(ParseError::Layout)?;
-
-	let (input, s) =
-		opt(tuple((tag(":"), digit1)))(input).map_err(ParseError::Layout)?;
-
-	let (input, ampm) =
-		opt(tuple((space0, parse_abbr)))(input).map_err(ParseError::Layout)?;
+pub fn parse_time(input: &str) -> ParseResult<NaiveTime> {
+	let (input, h) = digit1(input)?;
+	let (input, m) = opt(tuple((tag(":"), digit1)))(input)?;
+	let (input, s) = opt(tuple((tag(":"), digit1)))(input)?;
+	let (input, ampm) = opt(tuple((space0, parse_abbr)))(input)?;
 
 	let h: i64 = h
 		.parse()
-		.map_err(|e| ParseError::InvalidNumericValue(h, e))?;
+		.map_err(|e| ParseError::InvalidNumericValue(e).into_fail(input))?;
 
 	let m: i64 = match m {
 		Some((_, m)) => m
 			.parse()
-			.map_err(|e| ParseError::InvalidNumericValue(m, e))?,
+			.map_err(|e| ParseError::InvalidNumericValue(e).into_fail(input))?,
 		None => 0,
 	};
 
 	let s: i64 = match s {
 		Some((_, s)) => s
 			.parse()
-			.map_err(|e| ParseError::InvalidNumericValue(s, e))?,
+			.map_err(|e| ParseError::InvalidNumericValue(e).into_fail(input))?,
 		None => 0,
 	};
 
@@ -59,32 +53,34 @@ pub fn parse_time(input: &str) -> ParseResult<&str, NaiveTime> {
 		}
 	}
 
-	let time = parsed.to_naive_time().map_err(ParseError::InvalidTime)?;
+	let time = parsed
+		.to_naive_time()
+		.map_err(|e| ParseError::InvalidTime(e).into_fail(input))?;
 
 	Ok((input, time))
 }
 
-fn parse_am(input: &str) -> Result<(&str, Abbr), NomErr<&str>> {
+fn parse_am(input: &str) -> ParseResult<Abbr> {
 	let (input, _) =
 		alt((tag("AM"), tag("am"), tag("A.M"), tag("a.m.")))(input)?;
 
 	Ok((input, Abbr::AM))
 }
 
-fn parse_pm(input: &str) -> Result<(&str, Abbr), NomErr<&str>> {
+fn parse_pm(input: &str) -> ParseResult<Abbr> {
 	let (input, _) =
 		alt((tag("PM"), tag("pm"), tag("P.M"), tag("p.m.")))(input)?;
 
 	Ok((input, Abbr::PM))
 }
 
-fn parse_abbr(input: &str) -> Result<(&str, Abbr), NomErr<&str>> {
+fn parse_abbr(input: &str) -> ParseResult<Abbr> {
 	alt((parse_am, parse_pm))(input)
 }
 
-fn parse_at(input: &str) -> ParseResult<&str, Vec<NaiveTime>> {
-	let (input, _) = tag("at")(input).map_err(ParseError::Layout)?;
-	let (input, _) = space1(input).map_err(ParseError::Layout)?;
+fn parse_at(input: &str) -> ParseResult<Vec<NaiveTime>> {
+	let (input, _) = tag("at")(input)?;
+	let (input, _) = space1(input)?;
 
 	let mut res = vec![];
 	let sep = opt(alt((
@@ -96,7 +92,7 @@ fn parse_at(input: &str) -> ParseResult<&str, Vec<NaiveTime>> {
 	res.push(time);
 
 	loop {
-		let (i, s) = sep(input).map_err(ParseError::Layout)?;
+		let (i, s) = sep(input)?;
 		match s {
 			Some(_) => {
 				let (i, time) = parse_time(i)?;

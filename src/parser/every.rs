@@ -9,36 +9,17 @@ use nom::{
 };
 
 use super::dimension::parse_dimension;
-use super::error::{ParseError, ParseResult};
+use super::error::{Err, ParseError, ParseResult};
 
 use crate::types::{Dimension, Period, RecurringInterval};
 
-pub fn parse_period(input: &str) -> ParseResult<&str, RecurringInterval> {
-	let (input, _) = tag("every")(input).map_err(ParseError::Layout)?;
-	let (input, _) = space1(input).map_err(ParseError::Layout)?;
-	let (input, nth): (&str, Option<(&str, &str, &str, &str)>) = opt(tuple((
-		digit1,
-		alt((space0, tag("-"))),
-		alt((tag("st"), tag("nd"), tag("rd"), tag("th"))),
-		space1,
-	)))(input)
-	.map_err(ParseError::Layout)?;
-
-	let nth: Option<u32> = match nth {
-		Some((digit, _, _, _)) => Some(
-			digit
-				.parse()
-				.map_err(|e| ParseError::InvalidNumericValue(digit, e))?,
-		),
-		None => None,
-	};
-
-	let (input, num) = digit1(input).map_err(ParseError::Layout)?;
-	let (input, _) = space0(input).map_err(ParseError::Layout)?;
+pub fn parse_period(input: &str) -> ParseResult<Period> {
+	let (input, num) = digit1(input)?;
+	let (input, _) = space0(input)?;
 	let (input, dim) = parse_dimension(input)?;
 	let num: i64 = num
 		.parse()
-		.map_err(|e| ParseError::InvalidNumericValue(num, e))?;
+		.map_err(|e| ParseError::InvalidNumericValue(e).into_fail(input))?;
 
 	let period = match dim {
 		Dimension::Second => Period::Fixed(Duration::seconds(num)),
@@ -51,12 +32,44 @@ pub fn parse_period(input: &str) -> ParseResult<&str, RecurringInterval> {
 		Dimension::Year => Period::Year(num as i32),
 	};
 
-	let result = match nth {
-		Some(i) => RecurringInterval::NthPeriod(i, period),
-		None => RecurringInterval::Period(period),
+	Ok((input, period))
+}
+
+pub fn parse_ordinal(input: &str) -> ParseResult<Option<u32>> {
+	let (input, nth): (&str, Option<(&str, &str, &str, &str)>) = opt(tuple((
+		digit1,
+		alt((space0, tag("-"))),
+		alt((tag("st"), tag("nd"), tag("rd"), tag("th"))),
+		space1,
+	)))(input)?;
+
+	let nth = match nth {
+		Some((digit, _, _, _)) => Some(digit.parse().map_err(|e| {
+			ParseError::InvalidNumericValue(e).into_fail(input)
+		})?),
+		None => None,
 	};
 
-	Ok((input, result))
+	Ok((input, nth))
+}
+
+pub fn parse_every(input: &str) -> ParseResult<RecurringInterval> {
+	let (input, _) = tag("every")(input)?;
+	let (input, _) = space1(input)?;
+	let (input, nth) = parse_ordinal(input)?;
+
+	let res = parse_period(input);
+	match res {
+		Ok((input, period)) => {
+			let result = match nth {
+				Some(i) => RecurringInterval::NthPeriod(i, period),
+				None => RecurringInterval::Period(period),
+			};
+
+			return Ok((input, result));
+		}
+		Err(e) => Err(e),
+	}
 }
 
 #[cfg(test)]
@@ -66,7 +79,7 @@ mod tests {
 	#[test]
 	fn parse_every_10_days() {
 		assert_eq!(
-			parse_period("every 10 days").unwrap().1,
+			parse_every("every 10 days").unwrap().1,
 			RecurringInterval::Period(Period::Fixed(Duration::days(10)))
 		)
 	}
@@ -74,7 +87,7 @@ mod tests {
 	#[test]
 	fn parse_every_2nd_2_years() {
 		assert_eq!(
-			parse_period("every 2nd 2 years").unwrap().1,
+			parse_every("every 2nd 2 years").unwrap().1,
 			RecurringInterval::NthPeriod(2, Period::Year(2))
 		)
 	}

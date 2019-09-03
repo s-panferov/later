@@ -1,13 +1,42 @@
-use nom::{error::ErrorKind, Err};
-
-pub type NomErr<I> = Err<(I, ErrorKind)>;
+pub use nom::error::{ErrorKind, ParseError as _ParseError};
+pub use nom::Err;
 
 #[derive(Debug)]
-pub enum ParseError<'a, I> {
-	Layout(NomErr<I>),
-	UnknownDimension(I, &'a str),
-	InvalidNumericValue(I, std::num::ParseIntError),
+pub enum ParseError {
+	Layout(ErrorKind),
+	UnknownDimension,
+	InvalidNumericValue(std::num::ParseIntError),
 	InvalidTime(chrono::format::ParseError),
 }
 
-pub type ParseResult<'a, I, O> = Result<(I, O), ParseError<'a, I>>;
+impl ParseError {
+	pub fn into_err(self, input: &str) -> Err<ErrorContext> {
+		Err::Error(ErrorContext { input, error: self })
+	}
+
+	pub fn into_fail(self, input: &str) -> Err<ErrorContext> {
+		Err::Failure(ErrorContext { input, error: self })
+	}
+}
+
+#[derive(Debug)]
+pub struct ErrorContext<'a> {
+	input: &'a str,
+	error: ParseError,
+}
+
+impl<'a> _ParseError<&'a str> for ErrorContext<'a> {
+	fn from_error_kind(input: &'a str, kind: ErrorKind) -> Self {
+		ErrorContext {
+			input,
+			error: ParseError::Layout(kind),
+		}
+	}
+
+	fn append(_: &str, _: ErrorKind, other: Self) -> Self {
+		other
+	}
+}
+
+pub type ParseResult<'a, O> = Result<(&'a str, O), Err<ErrorContext<'a>>>;
+pub type SimpleResult<'a, O> = Result<(&'a str, O), Err<(&'a str, ErrorKind)>>;

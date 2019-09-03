@@ -1,4 +1,4 @@
-use chrono::Duration;
+use chrono::{Duration, Weekday};
 
 #[derive(Debug)]
 pub enum Dimension {
@@ -24,4 +24,7 @@ pub enum Period {
 pub enum RecurringInterval {
 	Period(Period),
 	NthPeriod(u32, Period),
+	Weekend,
+	Weekday,
+	DayOfWeek(Weekday),
 }
