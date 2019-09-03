@@ -1,10 +1,11 @@
-pub use nom::error::{ErrorKind, ParseError as _ParseError};
+pub use nom::error::{ErrorKind, ParseError as ErrorExt};
 pub use nom::Err;
 
 #[derive(Debug)]
 pub enum ParseError {
 	Layout(ErrorKind),
 	UnknownDimension,
+	Unsupported,
 	InvalidNumericValue(std::num::ParseIntError),
 	InvalidTime(chrono::format::ParseError),
 }
@@ -25,7 +26,7 @@ pub struct ErrorContext<'a> {
 	error: ParseError,
 }
 
-impl<'a> _ParseError<&'a str> for ErrorContext<'a> {
+impl<'a> ErrorExt<&'a str> for ErrorContext<'a> {
 	fn from_error_kind(input: &'a str, kind: ErrorKind) -> Self {
 		ErrorContext {
 			input,

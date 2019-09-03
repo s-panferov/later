@@ -1,17 +1,15 @@
 use chrono::Duration;
-
 use nom::{
-	branch::alt,
 	bytes::complete::tag,
 	character::complete::{digit1, space0, space1},
-	combinator::opt,
-	sequence::tuple,
 };
 
-use super::dimension::parse_dimension;
-use super::error::{Err, ParseError, ParseResult};
-
 use crate::types::{Dimension, Period, RecurringInterval};
+
+use super::dimension::parse_dimension;
+use super::error::{ParseError, ParseResult};
+use super::ordinal::parse_ordinal;
+use super::weekday::parse_weekday;
 
 pub fn parse_period(input: &str) -> ParseResult<Period> {
 	let (input, num) = digit1(input)?;
@@ -35,24 +33,6 @@ pub fn parse_period(input: &str) -> ParseResult<Period> {
 	Ok((input, period))
 }
 
-pub fn parse_ordinal(input: &str) -> ParseResult<Option<u32>> {
-	let (input, nth): (&str, Option<(&str, &str, &str, &str)>) = opt(tuple((
-		digit1,
-		alt((space0, tag("-"))),
-		alt((tag("st"), tag("nd"), tag("rd"), tag("th"))),
-		space1,
-	)))(input)?;
-
-	let nth = match nth {
-		Some((digit, _, _, _)) => Some(digit.parse().map_err(|e| {
-			ParseError::InvalidNumericValue(e).into_fail(input)
-		})?),
-		None => None,
-	};
-
-	Ok((input, nth))
-}
-
 pub fn parse_every(input: &str) -> ParseResult<RecurringInterval> {
 	let (input, _) = tag("every")(input)?;
 	let (input, _) = space1(input)?;
@@ -68,8 +48,15 @@ pub fn parse_every(input: &str) -> ParseResult<RecurringInterval> {
 
 			return Ok((input, result));
 		}
-		Err(e) => Err(e),
+		Err(e) => e,
+	};
+
+	let res = parse_weekday(input);
+	if res.is_ok() {
+		return res;
 	}
+
+	Err(ParseError::Unsupported.into_fail(input))
 }
 
 #[cfg(test)]

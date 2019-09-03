@@ -7,12 +7,25 @@ use nom::{
 	sequence::tuple,
 };
 
+use crate::types::At;
+
 use super::error::{ParseError, ParseResult};
+use super::utils::parse_chain;
 
 #[derive(PartialEq, Debug)]
 enum Abbr {
 	AM,
 	PM,
+}
+
+fn parse_at(input: &str) -> ParseResult<Vec<At>> {
+	let (input, _) = tag("at")(input)?;
+	let (input, _) = space1(input)?;
+
+	parse_chain(input, |input| {
+		let (input, time) = parse_time(input)?;
+		Ok((input, At::Time(time)))
+	})
 }
 
 pub fn parse_time(input: &str) -> ParseResult<NaiveTime> {
@@ -76,34 +89,6 @@ fn parse_pm(input: &str) -> ParseResult<Abbr> {
 
 fn parse_abbr(input: &str) -> ParseResult<Abbr> {
 	alt((parse_am, parse_pm))(input)
-}
-
-fn parse_at(input: &str) -> ParseResult<Vec<NaiveTime>> {
-	let (input, _) = tag("at")(input)?;
-	let (input, _) = space1(input)?;
-
-	let mut res = vec![];
-	let sep = opt(alt((
-		tuple((space0, tag(","), space0)),
-		tuple((space1, tag("and"), space1)),
-	)));
-
-	let (mut input, time) = parse_time(input)?;
-	res.push(time);
-
-	loop {
-		let (i, s) = sep(input)?;
-		match s {
-			Some(_) => {
-				let (i, time) = parse_time(i)?;
-				res.push(time);
-				input = i
-			}
-			None => break,
-		}
-	}
-
-	Ok((input, res))
 }
 
 #[cfg(test)]
