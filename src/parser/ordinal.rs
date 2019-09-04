@@ -1,4 +1,3 @@
-
 use nom::{
 	branch::alt,
 	bytes::complete::tag,
@@ -9,7 +8,7 @@ use nom::{
 
 use super::error::{ParseError, ParseResult};
 
-pub fn parse_ordinal(input: &str) -> ParseResult<Option<u32>> {
+pub fn parse_ordinal(input: &str) -> ParseResult<Option<usize>> {
 	let (input, nth): (&str, Option<(&str, &str, &str, &str)>) = opt(tuple((
 		digit1,
 		alt((space0, tag("-"))),

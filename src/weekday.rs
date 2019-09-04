@@ -4,7 +4,7 @@ use crate::interval::{AsIntervals, Interval};
 use crate::utils::{end_of, start_of, Of};
 
 impl AsIntervals for Weekday {
-	fn duration(&self) -> Duration {
+	fn duration_hint(&self) -> Duration {
 		Duration::days(1)
 	}
 
@@ -41,7 +41,6 @@ impl Iterator for WeekdayIterator {
 			let target_num = self.weekday.num_days_from_monday();
 			let current_num = current_day.num_days_from_monday();
 			let diff = target_num as i32 - current_num as i32;
-			println!("{:?}", diff);
 			let days_to_add = if diff > 0 {
 				diff as i64
 			} else {
@@ -73,18 +72,12 @@ impl Iterator for WeekdayIterator {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::schedule::{Schedule, SchedulePart};
 	use chrono::Weekday;
-
 	use insta::assert_debug_snapshot_matches;
 
 	#[test]
 	fn every_sunday() {
-		let schedule = Schedule::from_parts(vec![SchedulePart::Every(
-			Box::new(Weekday::Sun),
-		)]);
-
-		let what: Vec<Interval> = schedule
+		let what: Vec<Interval> = Weekday::Sun
 			.iter_within(Interval::from(
 				"2019-01-01T00:00:00Z".parse().unwrap(),
 			))

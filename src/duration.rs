@@ -2,7 +2,7 @@ use crate::interval::{AsIntervals, Interval};
 use chrono::Duration;
 
 impl AsIntervals for Duration {
-	fn duration(&self) -> Duration {
+	fn duration_hint(&self) -> Duration {
 		self.clone()
 	}
 

@@ -1,17 +1,32 @@
 use crate::interval::{AsIntervals, Interval};
-use crate::types::Period;
-use chrono::Duration;
+use chrono::{Duration, Weekday};
 
 use crate::merge::MergeN;
 use crate::month::MonthIterator;
 
+#[derive(Debug, PartialEq)]
+pub enum Period {
+	Fixed(Duration),
+	Month(i32),
+	Quarter(i32),
+	Year(i32),
+	Weekend,
+	Weekday,
+	DayOfWeek(Weekday),
+	Ordinal(usize, Box<Period>),
+}
+
 impl AsIntervals for Period {
-	fn duration(&self) -> Duration {
+	fn duration_hint(&self) -> Duration {
 		match self {
 			Period::Fixed(d) => d.clone(),
 			Period::Month(n) => Duration::weeks(4) * *n,
 			Period::Quarter(n) => Duration::weeks(4) * 3 * *n,
 			Period::Year(n) => Duration::weeks(4) * 12 * *n,
+			Period::Weekday | Period::Weekend | Period::DayOfWeek(_) => {
+				Duration::days(1)
+			}
+			Period::Ordinal(_, p) => p.duration_hint(),
 		}
 	}
 
@@ -32,6 +47,12 @@ impl AsIntervals for Period {
 				MonthIterator::new(interval),
 				(y * 12) as usize,
 			)),
+			Period::DayOfWeek(w) => Box::new(w.iter_within(interval)),
+			Period::Weekday => unimplemented!(),
+			Period::Weekend => unimplemented!(),
+			Period::Ordinal(m, p) => {
+				Box::new(p.iter_within(interval).step_by(*m))
+			}
 		}
 	}
 }

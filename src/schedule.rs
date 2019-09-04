@@ -1,16 +1,17 @@
 use crate::interval::{AsIntervals, Interval};
 
-pub enum SchedulePart {
-	Every(Box<dyn AsIntervals>),
-}
-
 pub struct Schedule {
-	parts: Vec<SchedulePart>,
+	items: Vec<Box<dyn AsIntervals>>,
+	bounds: Option<Interval>,
 }
 
 impl Schedule {
-	pub fn from_parts(parts: Vec<SchedulePart>) -> Self {
-		Schedule { parts }
+	pub fn new(
+		mut items: Vec<Box<dyn AsIntervals>>,
+		bounds: Option<Interval>,
+	) -> Self {
+		items.sort_by(|a, b| b.duration_hint().cmp(&a.duration_hint()));
+		Schedule { items, bounds }
 	}
 
 	/// Get an interator to resolve intervals
@@ -22,25 +23,14 @@ impl Schedule {
 pub struct ScheduleIterator<'a> {
 	interval: Interval,
 	schedule: &'a Schedule,
-	every: Vec<&'a Box<dyn AsIntervals>>,
 	initialized: bool,
 	state: Vec<Box<dyn Iterator<Item = Interval>>>,
 }
 
 impl<'a> ScheduleIterator<'a> {
 	fn new(schedule: &'a Schedule, interval: Interval) -> Self {
-		let mut every = vec![];
-		for p in &schedule.parts {
-			match p {
-				SchedulePart::Every(ref e) => every.push(e),
-			}
-		}
-
-		every.sort_by(|a, b| b.duration().cmp(&a.duration()));
-
 		ScheduleIterator {
 			schedule,
-			every,
 			interval,
 			initialized: false,
 			state: Vec::new(),
@@ -51,9 +41,10 @@ impl<'a> ScheduleIterator<'a> {
 impl<'a> ScheduleIterator<'a> {
 	fn init(&mut self, mut i: usize, interval: Interval) -> Option<Interval> {
 		let mut int = interval.clone();
-		let len = self.every.len();
+		let len = self.schedule.items.len();
 		while i < len {
-			let mut iter = self.every.get(i).unwrap().iter_within(int.clone());
+			let mut iter =
+				self.schedule.items.get(i).unwrap().iter_within(int.clone());
 			let next = iter.next();
 			match next {
 				Some(next) => {
@@ -74,7 +65,7 @@ impl<'a> Iterator for ScheduleIterator<'a> {
 
 	fn next(&mut self) -> Option<Interval> {
 		if !self.initialized {
-			let len = self.every.len();
+			let len = self.schedule.items.len();
 			if len == 0 {
 				return None;
 			}

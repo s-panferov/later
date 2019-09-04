@@ -23,7 +23,7 @@ impl Interval {
 /// Something that resolves to the range of time
 pub trait AsIntervals: Debug {
 	/// Get the estimate of the interval
-	fn duration(&self) -> Duration;
+	fn duration_hint(&self) -> Duration;
 
 	/// Get an interator to resolve intervals
 	fn iter_within(

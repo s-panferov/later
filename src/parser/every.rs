@@ -4,14 +4,17 @@ use nom::{
 	character::complete::{digit1, space0, space1},
 };
 
-use crate::types::{Dimension, Period, RecurringInterval};
+use crate::every::Every;
+use crate::period::Period;
+use crate::types::{Dimension};
 
 use super::dimension::parse_dimension;
 use super::error::{ParseError, ParseResult};
 use super::ordinal::parse_ordinal;
+use super::utils::parse_chain;
 use super::weekday::parse_weekday;
 
-pub fn parse_period(input: &str) -> ParseResult<Period> {
+pub fn parse_numeric_period(input: &str) -> ParseResult<Period> {
 	let (input, num) = digit1(input)?;
 	let (input, _) = space0(input)?;
 	let (input, dim) = parse_dimension(input)?;
@@ -33,23 +36,11 @@ pub fn parse_period(input: &str) -> ParseResult<Period> {
 	Ok((input, period))
 }
 
-pub fn parse_every(input: &str) -> ParseResult<RecurringInterval> {
-	let (input, _) = tag("every")(input)?;
-	let (input, _) = space1(input)?;
-	let (input, nth) = parse_ordinal(input)?;
-
-	let res = parse_period(input);
-	match res {
-		Ok((input, period)) => {
-			let result = match nth {
-				Some(i) => RecurringInterval::NthPeriod(i, period),
-				None => RecurringInterval::Period(period),
-			};
-
-			return Ok((input, result));
-		}
-		Err(e) => e,
-	};
+pub fn parse_period_inner(input: &str) -> ParseResult<Period> {
+	let res = parse_numeric_period(input);
+	if res.is_ok() {
+		return res;
+	}
 
 	let res = parse_weekday(input);
 	if res.is_ok() {
@@ -57,6 +48,23 @@ pub fn parse_every(input: &str) -> ParseResult<RecurringInterval> {
 	}
 
 	Err(ParseError::Unsupported.into_fail(input))
+}
+
+pub fn parse_period(input: &str) -> ParseResult<Period> {
+	let (input, ord) = parse_ordinal(input)?;
+	let (input, inner) = parse_period_inner(input)?;
+
+	match ord {
+		None => Ok((input, inner)),
+		Some(ord) => Ok((input, Period::Ordinal(ord, Box::new(inner)))),
+	}
+}
+
+pub fn parse_every(input: &str) -> ParseResult<Every> {
+	let (input, _) = tag("every")(input)?;
+	let (input, _) = space1(input)?;
+	let (input, res) = parse_chain(input, |input| parse_period(input))?;
+	Ok((input, Every::new(res)))
 }
 
 #[cfg(test)]
@@ -67,7 +75,7 @@ mod tests {
 	fn parse_every_10_days() {
 		assert_eq!(
 			parse_every("every 10 days").unwrap().1,
-			RecurringInterval::Period(Period::Fixed(Duration::days(10)))
+			Period::Fixed(Duration::days(10))
 		)
 	}
 
@@ -75,7 +83,7 @@ mod tests {
 	fn parse_every_2nd_2_years() {
 		assert_eq!(
 			parse_every("every 2nd 2 years").unwrap().1,
-			RecurringInterval::NthPeriod(2, Period::Year(2))
+			Period::Ordinal(2, Box::new(Period::Year(2)))
 		)
 	}
 }

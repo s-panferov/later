@@ -7,7 +7,7 @@ use nom::{
 	sequence::tuple,
 };
 
-use crate::types::At;
+use crate::at::At;
 
 use super::error::{ParseError, ParseResult};
 use super::utils::parse_chain;
@@ -21,7 +21,6 @@ enum Abbr {
 fn parse_at(input: &str) -> ParseResult<Vec<At>> {
 	let (input, _) = tag("at")(input)?;
 	let (input, _) = space1(input)?;
-
 	parse_chain(input, |input| {
 		let (input, time) = parse_time(input)?;
 		Ok((input, At::Time(time)))
