@@ -1,7 +1,7 @@
 use chrono::Duration;
 
 use crate::combine::Combine;
-use crate::interval::{AsIntervals, Interval};
+use crate::interval::{Interval, Timeline};
 use crate::period::Period;
 
 #[derive(Debug, PartialEq)]
@@ -15,7 +15,7 @@ impl Every {
 	}
 }
 
-impl AsIntervals for Every {
+impl Timeline for Every {
 	fn duration_hint(&self) -> Duration {
 		self.periods.get(0).map(|p| p.duration_hint()).unwrap()
 	}

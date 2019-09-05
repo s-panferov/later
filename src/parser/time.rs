@@ -18,13 +18,15 @@ enum Abbr {
 	PM,
 }
 
-fn parse_at(input: &str) -> ParseResult<Vec<At>> {
+fn parse_at(input: &str) -> ParseResult<At> {
 	let (input, _) = tag("at")(input)?;
 	let (input, _) = space1(input)?;
-	parse_chain(input, |input| {
+	let (input, times) = parse_chain(input, |input| {
 		let (input, time) = parse_time(input)?;
-		Ok((input, At::Time(time)))
-	})
+		Ok((input, time))
+	})?;
+
+	Ok((input, At::new(times)))
 }
 
 pub fn parse_time(input: &str) -> ParseResult<NaiveTime> {
@@ -97,7 +99,7 @@ mod tests {
 	fn parse_at_10_00() {
 		assert_eq!(
 			parse_at("at 10:00").unwrap().1,
-			vec![NaiveTime::from_hms(10, 0, 0)]
+			At::new(vec![NaiveTime::from_hms(10, 0, 0)])
 		)
 	}
 
@@ -105,7 +107,7 @@ mod tests {
 	fn parse_at_7_pm() {
 		assert_eq!(
 			parse_at("at 7 pm").unwrap().1,
-			vec![NaiveTime::from_hms(19, 0, 0)]
+			At::new(vec![NaiveTime::from_hms(19, 0, 0)])
 		)
 	}
 
@@ -113,11 +115,11 @@ mod tests {
 	fn parse_at_7_830pm_2030() {
 		assert_eq!(
 			parse_at("at 7pm, 8:30pm and 20:30").unwrap().1,
-			vec![
+			At::new(vec![
 				NaiveTime::from_hms(19, 0, 0),
 				NaiveTime::from_hms(20, 30, 0),
 				NaiveTime::from_hms(20, 30, 0)
-			]
+			])
 		)
 	}
 }

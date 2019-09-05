@@ -1,4 +1,4 @@
-use crate::interval::{AsIntervals, Interval};
+use crate::interval::{Interval, Timeline};
 use chrono::{Duration, Weekday};
 
 use crate::merge::MergeN;
@@ -16,7 +16,7 @@ pub enum Period {
 	Ordinal(usize, Box<Period>),
 }
 
-impl AsIntervals for Period {
+impl Timeline for Period {
 	fn duration_hint(&self) -> Duration {
 		match self {
 			Period::Fixed(d) => d.clone(),
@@ -60,7 +60,7 @@ impl AsIntervals for Period {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::interval::{AsIntervals, Interval};
+	use crate::interval::{Interval, Timeline};
 	use insta::assert_debug_snapshot_matches;
 
 	#[test]

@@ -1,0 +1,68 @@
+---
+created: "2019-09-05T05:08:22.943204Z"
+creator: insta@0.10.1
+source: src/timeframe.rs
+expression: "frame.iter_within(Interval::from(\"2019-10-31T00:00:00Z\".parse().unwrap())).take(10).collect::<Vec<_>>()"
+---
+[
+    Interval {
+        from: 2019-10-31T23:00:00Z,
+        to: Some(
+            2019-11-01T01:00:00Z,
+        ),
+    },
+    Interval {
+        from: 2019-11-01T23:00:00Z,
+        to: Some(
+            2019-11-02T01:00:00Z,
+        ),
+    },
+    Interval {
+        from: 2019-11-02T23:00:00Z,
+        to: Some(
+            2019-11-03T01:00:00Z,
+        ),
+    },
+    Interval {
+        from: 2019-11-03T23:00:00Z,
+        to: Some(
+            2019-11-04T01:00:00Z,
+        ),
+    },
+    Interval {
+        from: 2019-11-04T23:00:00Z,
+        to: Some(
+            2019-11-05T01:00:00Z,
+        ),
+    },
+    Interval {
+        from: 2019-11-05T23:00:00Z,
+        to: Some(
+            2019-11-06T01:00:00Z,
+        ),
+    },
+    Interval {
+        from: 2019-11-06T23:00:00Z,
+        to: Some(
+            2019-11-07T01:00:00Z,
+        ),
+    },
+    Interval {
+        from: 2019-11-07T23:00:00Z,
+        to: Some(
+            2019-11-08T01:00:00Z,
+        ),
+    },
+    Interval {
+        from: 2019-11-08T23:00:00Z,
+        to: Some(
+            2019-11-09T01:00:00Z,
+        ),
+    },
+    Interval {
+        from: 2019-11-09T23:00:00Z,
+        to: Some(
+            2019-11-10T01:00:00Z,
+        ),
+    },
+]

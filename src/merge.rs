@@ -81,7 +81,7 @@ impl<T: Iterator<Item = Interval>> Iterator for Merge<T> {
 mod tests {
 	use super::*;
 	use crate::combine::Combine;
-	use crate::interval::AsIntervals;
+	use crate::interval::Timeline;
 	use chrono::Weekday;
 	use insta::assert_debug_snapshot_matches;
 

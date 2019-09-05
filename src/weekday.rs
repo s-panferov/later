@@ -1,9 +1,9 @@
 use chrono::{Datelike, Duration, Weekday};
 
-use crate::interval::{AsIntervals, Interval};
+use crate::interval::{Interval, Timeline};
 use crate::utils::{end_of, start_of, Of};
 
-impl AsIntervals for Weekday {
+impl Timeline for Weekday {
 	fn duration_hint(&self) -> Duration {
 		Duration::days(1)
 	}

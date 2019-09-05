@@ -1,7 +1,7 @@
-use crate::interval::{AsIntervals, Interval};
+use crate::interval::{Interval, Timeline};
 use chrono::Duration;
 
-impl AsIntervals for Duration {
+impl Timeline for Duration {
 	fn duration_hint(&self) -> Duration {
 		self.clone()
 	}

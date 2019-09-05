@@ -21,7 +21,7 @@ impl Interval {
 }
 
 /// Something that resolves to the range of time
-pub trait AsIntervals: Debug {
+pub trait Timeline: Debug {
 	/// Get the estimate of the interval
 	fn duration_hint(&self) -> Duration;
 

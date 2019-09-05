@@ -75,7 +75,7 @@ mod tests {
 	fn parse_every_10_days() {
 		assert_eq!(
 			parse_every("every 10 days").unwrap().1,
-			Period::Fixed(Duration::days(10))
+			Every::new(vec![Period::Fixed(Duration::days(10))])
 		)
 	}
 
@@ -83,7 +83,7 @@ mod tests {
 	fn parse_every_2nd_2_years() {
 		assert_eq!(
 			parse_every("every 2nd 2 years").unwrap().1,
-			Period::Ordinal(2, Box::new(Period::Year(2)))
+			Every::new(vec![Period::Ordinal(2, Box::new(Period::Year(2)))])
 		)
 	}
 }

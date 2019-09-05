@@ -1,13 +1,13 @@
-use crate::interval::{AsIntervals, Interval};
+use crate::interval::{Interval, Timeline};
 
 pub struct Schedule {
-	items: Vec<Box<dyn AsIntervals>>,
+	items: Vec<Box<dyn Timeline>>,
 	bounds: Option<Interval>,
 }
 
 impl Schedule {
 	pub fn new(
-		mut items: Vec<Box<dyn AsIntervals>>,
+		mut items: Vec<Box<dyn Timeline>>,
 		bounds: Option<Interval>,
 	) -> Self {
 		items.sort_by(|a, b| b.duration_hint().cmp(&a.duration_hint()));
